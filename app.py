@@ -37,7 +37,7 @@ class VehicleDetection(QMainWindow):
         self.setCentralWidget(central_widget)
 
         # Create layout for central widget
-        main_layout = QHBoxLayout(central_widget)
+        main_layout = QGridLayout(central_widget)
         main_layout.setSpacing(10)
 
 # ------------------------------- WEBCAM INPUT ------------------------------------------ #
@@ -48,12 +48,12 @@ class VehicleDetection(QMainWindow):
         # Create a label to display the webcam feed
         self.webcamLabel = QLabel(self)
         self.webcamLabel.setScaledContents(True)
-        self.webcamLabel.setStyleSheet("padding-left: 30px")
+        self.webcamLabel.setStyleSheet("padding-left: 30px; padding-bottom: 30px")
         self.webcamLabel.setFixedWidth(780)
         self.webcamLabel.setFixedHeight(560)
-        
+        self.webcamLabel.setContentsMargins(30, 0, 10, 30)
         # self.setCentralWidget(self.webcamLabel)
-        main_layout.addWidget(self.webcamLabel, alignment=Qt.AlignmentFlag.AlignVCenter)
+        main_layout.addWidget(self.webcamLabel, 1, 0, 3, 1, Qt.AlignmentFlag.AlignTop)
         # webcam_layout.addWidget(self.webcamLabel)
         # main_layout.addWidget(webcam_widget)
 
@@ -67,34 +67,60 @@ class VehicleDetection(QMainWindow):
         self.timer.timeout.connect(self.updateWebcam)
         self.timer.start(16)
 
+        # Create label for rate list
+        self.rate_label = QLabel("Rate List")
+        self.rate_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.rate_label.setContentsMargins(630, 20, 0, 0)
+        self.rate_label.setStyleSheet("font-family: Bebas Neue; font-size: 20pt; font-weight: bold")
+        main_layout.addWidget(self.rate_label, 0, 0)
+
+        # Create label for rate values
+        self.rate_value = QLabel("{}: {}, \n{}: {}, \n{}: {}".format(api.category_dict["2"], api.price_dict["2"], api.category_dict["1"], api.price_dict["1"], api.category_dict["0"], api.price_dict["0"]))
+        self.rate_value.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.rate_value.setContentsMargins(0, 20, 0, 0)
+        self.rate_value.setStyleSheet("font-family: Bebas Neue; font-size: 20pt;")
+        main_layout.addWidget(self.rate_value, 0, 1, 1, 2)
+
+        # Create a QTimer that triggers every second to update rate list
+        self.rate_timer = QTimer(self)
+        self.rate_timer.setInterval(1000)
+        self.rate_timer.timeout.connect(self.updateRates)
+
+        # Start the rate timer
+        self.rate_timer.start()
+        
         # Create layout for right half of screen
-        right_layout = QGridLayout()
-        right_layout.setSpacing(10)
-        main_layout.addLayout(right_layout, 1)
+        # right_layout = QGridLayout()
+        # right_layout.setSpacing(10)
+        # main_layout.addLayout(right_layout, 0, 1)
 
         # Create label for category label
         self.category_label = QLabel("Category")
-        self.category_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.category_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.category_label.setContentsMargins(150, 100, 0, 20)
         self.category_label.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
-        right_layout.addWidget(self.category_label, 0, 0, 3, 3)
+        main_layout.addWidget(self.category_label, 1, 1, 2, 1)
 
         # Create label for category name
         self.category_name = QLabel()
-        self.category_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.category_name.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.category_name.setContentsMargins(10, 100, 0, 20)
         self.category_name.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
-        right_layout.addWidget(self.category_name, 0, 1, 3, 3)
+        main_layout.addWidget(self.category_name, 1, 2, 2, 1)
 
         # Create label for price label
         self.price_label = QLabel("Price")
-        self.price_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.price_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.price_label.setContentsMargins(150, 100, 0, 20)
         self.price_label.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
-        right_layout.addWidget(self.price_label, 1, 0, 3, 3)
+        main_layout.addWidget(self.price_label, 2, 1, 2, 1)
 
         # Create label for price value
         self.price_value = QLabel()
-        self.price_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.price_value.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.price_value.setContentsMargins(10, 100, 0, 20)
         self.price_value.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
-        right_layout.addWidget(self.price_value, 1, 1, 3, 3)
+        main_layout.addWidget(self.price_value, 2, 2, 2, 1)
 
     
     def keyPressEvent(self, event):
@@ -143,6 +169,9 @@ class VehicleDetection(QMainWindow):
         # Set the image to the webcam label
         self.webcamLabel.setPixmap(QPixmap.fromImage(image))
 
+    def updateRates(self):
+        self.rate_value.setText("{}: {}, \n{}: {}, \n{}: {}".format(api.category_dict["2"], api.price_dict["2"], api.category_dict["1"], api.price_dict["1"], api.category_dict["0"], api.price_dict["0"]))
+
     def predict(self, image_path):
         model = load_model('model_inceptionresnetv2.h5')
         img = image.load_img(image_path, target_size=(299,299))
@@ -154,40 +183,10 @@ class VehicleDetection(QMainWindow):
         return category
 
     def updateOutput(self, result):
-        self.category_name.setText(str(api.category_dict[str(result)]))
-        self.price_value.setText(str(api.price_dict[str(result)]))
+        self.category_name.setText(api.category_dict[str(result)])
+        self.price_value.setText(api.price_dict[str(result)])
     
-# -----------------------VIDEO INPUT ---------------------------------------------------- #
-        # Create video instance and add to layout
-    #     self.video_instance = QMediainstance()
-    #     self.video_widget = QVideoWidget()
-    #     self.video_widget.setFixedSize(720, 480)
-    #     self.video_instance.setVideoOutput(self.video_widget)
-    #     main_layout.addWidget(self.video_widget, 2, alignment=Qt.AlignmentFlag.AlignVCenter)
 
-    #     # Create layout for right half of screen
-    #     right_layout = QVBoxLayout()
-    #     right_layout.setSpacing(10)
-    #     main_layout.addLayout(right_layout, 1)
-
-    #     # Create label for textual data and add to right layout
-    #     self.category_label = QLabel("Textual Data")
-    #     self.category_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    #     right_layout.addWidget(self.category_label)
-
-    #     # Create upload video button and add to right layout
-    #     self.upload_button = QPushButton("Upload Video")
-    #     self.upload_button.clicked.connect(self.upload_video)
-    #     right_layout.addWidget(self.upload_button)
-
-    # def upload_video(self):
-    #     options = QFileDialog.Option(value=0x00000008)
-    #     options |= QFileDialog.Option.DontUseNativeDialog
-    #     file_name, _ = QFileDialog.getOpenFileName(self, "Open Video", "", "Video Files (*.mp4 *.avi *.mov *.wmv)", options=options)
-    #     if file_name:
-    #         self.video_instance.setSource(QUrl.fromLocalFile(file_name))
-    #         self.video_instance.setLoops(-1)
-    #         self.video_instance.play()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

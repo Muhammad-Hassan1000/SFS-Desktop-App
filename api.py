@@ -51,9 +51,9 @@ def check_timeinforce(tif):
     # Check if the target datetime has passed
     if current_datetime >= target_datetime:
         print(price_dict)
-        price_dict["0"]=ratelist[2]
-        price_dict["1"]=ratelist[1]
-        price_dict["2"]=ratelist[0]
+        price_dict["0"]="Rs." + str(ratelist[2]) + "/ltr"
+        price_dict["1"]="Rs." + str(ratelist[1]) + "/ltr"
+        price_dict["2"]="Rs." + str(ratelist[0]) + "/ltr"
         print(price_dict)
         print("  --  --")
 
