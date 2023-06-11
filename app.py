@@ -4,6 +4,7 @@ import cv2
 import datetime
 from PIL import Image
 import numpy as np
+import torch
 from tensorflow.keras.applications.inception_resnet_v2 import preprocess_input
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
@@ -122,7 +123,28 @@ class VehicleDetection(QMainWindow):
         self.price_value.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
         main_layout.addWidget(self.price_value, 2, 2, 2, 1)
 
+        # self.detection_model = self.load_detection_model()
+
+    # def load_detection_model():
+    #     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    #     path = 'best.pt'
+    #     model = torch.hub.load("yolov7", "custom", f"{path}", trust_repo=True)
+    #     return model
     
+    def detect(self, path):
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        weights_path = 'best.pt'
+        model = torch.hub.load("WongKinYiu/yolov7", "custom", f"{weights_path}", trust_repo=True)
+        results = model(path)
+        try:
+            coords = results.pandas().xyxy[0].iloc[0, :4].to_list()
+            org_img = cv2.imread(path, cv2.COLOR_BGR2RGB)
+            cropped_img = org_img[int(coords[1]):int(coords[3]), int(coords[0]):int(coords[2])].copy()
+            return results, cropped_img
+        except:
+            print('No vehicle detected')
+        
+
     def keyPressEvent(self, event):
         # Check if the Escape key was pressed
         if event.key() == Qt.Key.Key_Escape:
@@ -149,8 +171,12 @@ class VehicleDetection(QMainWindow):
             image_path = "SFS Captures/" + datetime.datetime.now().strftime("%d-%m-%y %H-%M-%S") + ".jpg"
             cv2.imwrite(image_path, frame)
 
+            # Detect vehicles from the image captured
+            detected_results, img_to_classify = self.detect(image_path)
+            detected_results.save('SFS Captures/')
+
             # Predict on the captured image
-            category = self.predict(image_path)
+            category = self.predict(img_to_classify)
             print("Spacebar pressed!")
 
             self.updateOutput(category)
@@ -172,13 +198,13 @@ class VehicleDetection(QMainWindow):
     def updateRates(self):
         self.rate_value.setText("{}: {}, \n{}: {}, \n{}: {}".format(api.category_dict["2"], api.price_dict["2"], api.category_dict["1"], api.price_dict["1"], api.category_dict["0"], api.price_dict["0"]))
 
-    def predict(self, image_path):
-        model = load_model('model_inceptionresnetv2.h5')
-        img = image.load_img(image_path, target_size=(299,299))
-        x = image.img_to_array(img)
-        x = np.expand_dims(x, axis=0)
+    def predict(self, crop_image):
+        classification_model = load_model('model_inceptionresnetv2.h5')
+        # img = image.load_img(image_path, target_size=(299,299))
+        # x = image.img_to_array(img)
+        x = np.expand_dims(crop_image, axis=0)
         img_data = preprocess_input(x)
-        prediction = np.argmax(model.predict(img_data), axis=1)[0]
+        prediction = np.argmax(classification_model.predict(img_data), axis=1)[0]
         category = prediction
         return category
 
@@ -192,6 +218,8 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     instance = VehicleDetection()
     instance.show()
+    # detection_model = instance.load_detection_model()
+    # print(type(detection_model))
     thread = threading.Thread(target=api.thread_function)
     thread.start()
     sys.exit(app.exec())
