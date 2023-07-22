@@ -11,18 +11,94 @@ from ultralytics import YOLO
 from tensorflow.keras.applications.inception_resnet_v2 import preprocess_input
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
-from PyQt6.QtCore import Qt, QUrl, QTimer
+from PyQt6.QtCore import Qt, QUrl, QTimer, QThread, pyqtSignal
 from PyQt6.QtGui import QGuiApplication, QImage, QPixmap
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QGridLayout, QVBoxLayout, QLabel, QPushButton, QFileDialog 
 # from PyQt6.QtMultimedia import QMediainstance
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 import threading
+from subprocess import Popen
 import api
 
 # category_dict = api.category_dict
 # price_dict = api.price_dict
 
-class VehicleDetection(QMainWindow):
+class VehicleDetectionThread(QThread):
+    # Defining the signal/ output returned by this thread which is a QImage
+    image_update = pyqtSignal(QImage)
+
+    def __init__(self):
+        self.frame = None
+        super().__init__()
+
+    # Setter
+    def setFrame(self, frame):
+        self.frame = frame
+
+    # Function to run the thread
+    def run(self):
+        self.threadActive = True
+        while self.threadActive:
+            self.process_frame(self.frame)
+
+    def stop(self):
+        self.threadActive = False
+        self.quit()
+
+    def process_frame(self, frm):
+        # ret, frame = self.webcam.read()
+        # frame = cv2.flip(frame, 1)
+        # if ret:
+            # Preprocess the frame
+            # preprocessed_frame = self.preprocess_frame(frame)
+            frame = cv2.cvtColor(frm, cv2.COLOR_BGR2RGB)
+            print("preprocessing frame done")
+
+            # preprocessed_frame = preprocessed_frame.squeeze(0)
+            # transformer = transforms.ToPILImage()
+            # org_im = transformer(frame)
+            org_im = Image.fromarray(frame)
+            timestamp = datetime.datetime.now().strftime("%d-%m-%y %H-%M-%S")
+            org_im.save(timestamp + '.jpg')
+            # Pass the preprocessed frame through the YOLOv7 model
+            print("Detection started")
+            self.detection(timestamp + '.jpg')
+            print("Detection done")
+            detection_path = "SFS Captures/detections/"
+            self.convert_frame(detection_path + timestamp + ".jpg")
+            # print("Predictions:", predictions)
+            # predictions.save('SFS Captures/')
+            # pred_data = predictions.pandas().xyxy[0]
+            # print('Prediction done')
+            # print(pred_data)
+
+            # # Check for empty dataframe (No Vehicles Detected)
+            # if not pred_data.empty:
+            #     # Draw bounding boxes and labels on the frame
+            #     output_frame = self.draw_predictions(frame, pred_data)
+
+            #     # Display the updated frame in the PyQt6 application
+            #     self.display_frame(output_frame)
+            
+            # else:
+            #     # Display simple frame with no boxes
+            #     self.display_frame(frame)
+
+    def detection(self, image_path):
+        weights_path = 'best.pt'
+        process = Popen(["python", "detect.py", "--weights", weights_path, "--source", image_path, "--project", "SFS Captures", "--name", "detections", "--exist-ok"], shell=True)
+        process.wait()
+
+    def convert_frame(self, img_path):
+        image_after_detection = cv2.imread(img_path)
+        corrected_image = cv2.cvtColor(image_after_detection, cv2.COLOR_BGR2RGB)
+        # Convert the frame to QImage and display it in the QLabel
+        q_image = QImage(corrected_image.data, corrected_image.shape[1], corrected_image.shape[0], QImage.Format.Format_RGB888)
+        q_image = q_image.scaled(780, 560, Qt.AspectRatioMode.KeepAspectRatio)
+        # Send the image back to main program
+        self.image_update.emit(q_image)
+
+class ApplicationWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
@@ -61,10 +137,10 @@ class VehicleDetection(QMainWindow):
         # webcam_layout.addWidget(self.webcamLabel)
         # main_layout.addWidget(webcam_widget)
 
-        self.yolo_model = YOLO('yolov8n.pt')
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        weights_path = 'best.pt'
-        self.yolov7_model = torch.hub.load("WongKinYiu/yolov7", "custom", f"{weights_path}", trust_repo=True)
+        # self.yolo_model = YOLO('yolov8n.pt')
+        # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        # weights_path = 'best.pt'
+        # self.yolov7_model = torch.hub.load("WongKinYiu/yolov7", "custom", f"{weights_path}", trust_repo=True)
         
         # yolo_model.predict(source="0", show=True)
 
@@ -76,7 +152,7 @@ class VehicleDetection(QMainWindow):
         # Set up a timer to update the webcam feed
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.updateWebcam)
-        self.timer.start(16)
+        self.timer.start(50)
 
         # Create label for rate list
         self.rate_label = QLabel("Rate List")
@@ -133,6 +209,9 @@ class VehicleDetection(QMainWindow):
         self.price_value.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
         main_layout.addWidget(self.price_value, 2, 2, 2, 1)
 
+
+        # Instantiating a thread to carry out detections
+        self.DetectionThread = VehicleDetectionThread()
         # self.detection_model = self.load_detection_model()
 
     # def load_detection_model():
@@ -141,40 +220,7 @@ class VehicleDetection(QMainWindow):
     #     model = torch.hub.load("yolov7", "custom", f"{path}", trust_repo=True)
     #     return model
 
-    def process_frame(self, frm):
-        # ret, frame = self.webcam.read()
-        # frame = cv2.flip(frame, 1)
-        # if ret:
-            # Preprocess the frame
-            # preprocessed_frame = self.preprocess_frame(frame)
-            frame = cv2.cvtColor(frm, cv2.COLOR_BGR2RGB)
-            print("preprocessing frame done")
-
-            # preprocessed_frame = preprocessed_frame.squeeze(0)
-            # transformer = transforms.ToPILImage()
-            # org_im = transformer(frame)
-            org_im = Image.fromarray(frame)
-            timestamp = datetime.datetime.now().strftime("%d-%m-%y %H-%M-%S")
-            org_im.save(timestamp + '.jpg')
-            # Pass the preprocessed frame through the YOLOv7 model
-            predictions = self.yolov7_model(timestamp + '.jpg')
-            print("Predictions:", predictions)
-            predictions.save('SFS Captures/')
-            pred_data = predictions.pandas().xyxy[0]
-            print('Prediction done')
-            print(pred_data)
-
-            # Check for empty dataframe (No Vehicles Detected)
-            if not pred_data.empty:
-                # Draw bounding boxes and labels on the frame
-                output_frame = self.draw_predictions(frame, pred_data)
-
-                # Display the updated frame in the PyQt6 application
-                self.display_frame(output_frame)
-            
-            else:
-                # Display simple frame with no boxes
-                self.display_frame(frame)
+    
 
     def preprocess_frame(self, frame):
         # Preprocess the frame by resizing and normalizing pixel values
@@ -217,15 +263,6 @@ class VehicleDetection(QMainWindow):
                 cv2.putText(frame, label_text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
         return frame
-
-
-    def display_frame(self, frame):
-        # Convert the frame to QImage and display it in the QLabel
-        height, width, channels = frame.shape
-        bytes_per_line = channels * width
-        q_image = QImage(frame.data, width, height, bytes_per_line, QImage.Format.Format_RGB888)
-        q_pixmap = QPixmap.fromImage(q_image)
-        self.webcamLabel.setPixmap(q_pixmap.scaled(self.webcamLabel.size(), Qt.AspectRatioMode.KeepAspectRatio))
 
     def releaseMemory(self):
         # Release the webcam capture and stop the timer when closing the application
@@ -298,9 +335,16 @@ class VehicleDetection(QMainWindow):
         image = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format.Format_BGR888)
 
         # Set the image to the webcam label
-        self.webcamLabel.setPixmap(QPixmap.fromImage(image))
+        self.updateImage(image)
 
-        self.process_frame(frame)
+        # Starting the thread
+        self.DetectionThread.setFrame(frame)
+        self.DetectionThread.start()
+        self.DetectionThread.image_update.connect(self.updateImage)
+        # self.process_frame(frame)
+
+    def updateImage(self, image):
+        self.webcamLabel.setPixmap(QPixmap.fromImage(image))
 
     def updateRates(self):
         self.rate_value.setText("{}: {}, \n{}: {}, \n{}: {}".format(api.category_dict["2"], api.price_dict["2"], api.category_dict["1"], api.price_dict["1"], api.category_dict["0"], api.price_dict["0"]))
@@ -323,8 +367,10 @@ class VehicleDetection(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    instance = VehicleDetection()
+    instance = ApplicationWindow()
     instance.show()
+    model = torch.hub.load('./yolov7', 'custom', 'best.pt', source='local')
+    model.eval()
     # detection_model = instance.load_detection_model()
     # print(type(detection_model))
     thread = threading.Thread(target=api.thread_function)

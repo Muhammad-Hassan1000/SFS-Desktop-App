@@ -1,0 +1,6 @@
+{
+    "python.defaultInterpreterPath": "C:\\Users\\muham\\AppData\\Local\\Programs\\Python\\Python37\\python.exe",
+    "python.analysis.extraPaths": [
+        "./yolov7"
+    ]
+}
