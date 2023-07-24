@@ -18,6 +18,12 @@ import api
 # category_dict = api.category_dict
 # price_dict = api.price_dict
 
+# Load the pre-trained SSD model
+model_path = 'mobilenet_iter_73000.caffemodel'
+prototxt_path = 'deploy.prototxt'
+net = cv2.dnn.readNetFromCaffe(prototxt_path, model_path)
+
+
 class VehicleDetection(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -163,6 +169,35 @@ class VehicleDetection(QMainWindow):
         if not ret:
             return
 
+        blob = cv2.dnn.blobFromImage(frame, 0.007843, (300, 300), 127.5)
+
+        # Set the input to the model and perform detection
+        net.setInput(blob)
+        detections = net.forward()
+
+        # Process detections and draw bounding boxes on the frame
+        for i in range(detections.shape[2]):
+            confidence = detections[0, 0, i, 2]
+
+            if confidence > 0.9:  # Set the confidence threshold here
+                
+                class_id = int(detections[0, 0, i, 1])
+                class_name = 'Car'  # You can use a list of class names if needed
+                color = (255, 0, 0)  # BGR color for bounding box (blue in this case)
+                box = detections[0, 0, i, 3:7] * np.array([frame.shape[1], frame.shape[0], frame.shape[1], frame.shape[0]])
+                x1, y1, x2, y2 = box.astype('int')
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness=2)
+                cv2.putText(frame, class_name, (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                
+                # self.predict(frame[y1:y2, x1:x2])
+
+                # Predict on the captured image in a new thread
+                thread = threading.Thread(target=self.predict, args=(frame,))
+                thread.start()
+
+        # Show the frame with bounding boxes
+        #cv2.imshow('Car Detection', frame)
+
         # Convert the frame to a QImage
         image = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format.Format_BGR888)
 
@@ -171,16 +206,27 @@ class VehicleDetection(QMainWindow):
 
     def updateRates(self):
         self.rate_value.setText("{}: {}, \n{}: {}, \n{}: {}".format(api.category_dict["2"], api.price_dict["2"], api.category_dict["1"], api.price_dict["1"], api.category_dict["0"], api.price_dict["0"]))
-
+    count_thread=0
     def predict(self, image_path):
+        print(self.count_thread,"000000000000000")
+        if self.count_thread>0:
+            return
+
+        self.count_thread+=1
+        print(self.count_thread,"111111111")
         model = load_model('model_inceptionresnetv2.h5')
-        img = image.load_img(image_path, target_size=(299,299))
-        x = image.img_to_array(img)
-        x = np.expand_dims(x, axis=0)
+        # img = image.load_img(image_path, target_size=(299,299))
+        # x = image.img_to_array(img)
+        d = cv2.resize(image_path, (299, 299))
+        x = np.expand_dims(d, axis=0)
         img_data = preprocess_input(x)
         prediction = np.argmax(model.predict(img_data), axis=1)[0]
         category = prediction
-        return category
+        print("Category: ", category, self.count_thread)
+        # return category
+        self.category_name.setText(api.category_dict[str(category)])
+        self.price_value.setText(api.price_dict[str(category)])
+        self.count_thread=0
 
     def updateOutput(self, result):
         self.category_name.setText(api.category_dict[str(result)])
