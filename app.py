@@ -4,20 +4,15 @@ import cv2
 import datetime
 from PIL import Image
 import numpy as np
-import torch
-import torch.nn as nn
-import torchvision.transforms as transforms
-from ultralytics import YOLO
 from tensorflow.keras.applications.inception_resnet_v2 import preprocess_input
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
-from PyQt6.QtCore import Qt, QUrl, QTimer, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QUrl, QTimer
 from PyQt6.QtGui import QGuiApplication, QImage, QPixmap
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QGridLayout, QVBoxLayout, QLabel, QPushButton, QFileDialog 
 # from PyQt6.QtMultimedia import QMediainstance
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 import threading
-from subprocess import Popen
 import api
 
 # category_dict = api.category_dict
@@ -59,7 +54,7 @@ class VehicleDetection(QMainWindow):
         # Create a label to display the webcam feed
         self.webcamLabel = QLabel(self)
         self.webcamLabel.setScaledContents(True)
-        self.webcamLabel.setStyleSheet("padding-left: 30px; padding-bottom: 30px;")
+        self.webcamLabel.setStyleSheet("padding-left: 30px; padding-bottom: 30px")
         self.webcamLabel.setFixedWidth(780)
         self.webcamLabel.setFixedHeight(560)
         self.webcamLabel.setContentsMargins(30, 0, 10, 30)
@@ -67,13 +62,6 @@ class VehicleDetection(QMainWindow):
         main_layout.addWidget(self.webcamLabel, 1, 0, 3, 1, Qt.AlignmentFlag.AlignTop)
         # webcam_layout.addWidget(self.webcamLabel)
         # main_layout.addWidget(webcam_widget)
-
-        # self.yolo_model = YOLO('yolov8n.pt')
-        # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        # weights_path = 'best.pt'
-        # self.yolov7_model = torch.hub.load("WongKinYiu/yolov7", "custom", f"{weights_path}", trust_repo=True)
-        
-        # yolo_model.predict(source="0", show=True)
 
         # Set up the webcam
         self.webcam = cv2.VideoCapture(0)
@@ -83,7 +71,7 @@ class VehicleDetection(QMainWindow):
         # Set up a timer to update the webcam feed
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.updateWebcam)
-        self.timer.start(50)
+        self.timer.start(16)
 
         # Create label for rate list
         self.rate_label = QLabel("Rate List")
@@ -140,88 +128,11 @@ class VehicleDetection(QMainWindow):
         self.price_value.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
         main_layout.addWidget(self.price_value, 2, 2, 2, 1)
 
-
-        # Instantiating a thread to carry out detections
-        self.DetectionThread = VehicleDetectionThread()
-        # self.detection_model = self.load_detection_model()
-
-    # def load_detection_model():
-    #     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    #     path = 'best.pt'
-    #     model = torch.hub.load("yolov7", "custom", f"{path}", trust_repo=True)
-    #     return model
-
     
-
-    def preprocess_frame(self, frame):
-        # Preprocess the frame by resizing and normalizing pixel values
-        # resized_frame = cv2.resize(frame, (416, 416))
-        normalized_frame = frame / 255.0
-        tensor_frame = transforms.ToTensor()(normalized_frame)
-        return torch.unsqueeze(tensor_frame, 0)
-    
-    def draw_predictions(self, frame, predictions):
-        # Draw bounding boxes and labels on the frame based on the predictions
-        # Get the predicted class labels, bounding box coordinates, and confidence scores
-        class_labels = predictions.iloc[:, 5:]
-        bbox_coordinates = predictions.iloc[:, :4]
-        confidence_scores = predictions.iloc[:, 4]
-
-        # Iterate over each prediction
-        for class_label, bbox_coordinate, confidence_score in zip(class_labels, bbox_coordinates, confidence_scores):
-            # Filter out low-confidence predictions
-            if confidence_score > 0.5:
-                # Get the class index with the highest confidence score
-                print(class_label)
-                class_index = torch.argmax(class_label)
-
-                # Get the predicted bounding box coordinates
-                x, y, w, h = bbox_coordinate
-
-                # Convert the relative coordinates to absolute coordinates
-                x = int(x * frame.shape[1])
-                y = int(y * frame.shape[0])
-                w = int(w * frame.shape[1])
-                h = int(h * frame.shape[0])
-
-                # Draw the bounding box on the frame
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-                # Create the label text
-                label_text = f"Class: {class_index}, Confidence: {confidence_score:.2f}"
-
-                # Draw the label on the frame
-                cv2.putText(frame, label_text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-
-        return frame
-
-    def releaseMemory(self):
-        # Release the webcam capture and stop the timer when closing the application
-        self.webcam.release()
-        self.timer.stop()
-        self.rate_timer.stop()
-
-
-    
-    def detect(self, path):
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        weights_path = 'best.pt'
-        model = torch.hub.load("WongKinYiu/yolov7", "custom", f"{weights_path}", trust_repo=True)
-        results = model(path)
-        try:
-            coords = results.pandas().xyxy[0].iloc[0, :4].to_list()
-            org_img = cv2.imread(path, cv2.COLOR_BGR2RGB)
-            cropped_img = org_img[int(coords[1]):int(coords[3]), int(coords[0]):int(coords[2])].copy()
-            return results, cropped_img
-        except:
-            print('No vehicle detected')
-        
-
     def keyPressEvent(self, event):
         # Check if the Escape key was pressed
         if event.key() == Qt.Key.Key_Escape:
             print("Esc pressed, closing.....")
-            self.releaseMemory()
             self.close()
             api.end_api = True
 
@@ -244,12 +155,8 @@ class VehicleDetection(QMainWindow):
             image_path = "SFS Captures/" + datetime.datetime.now().strftime("%d-%m-%y %H-%M-%S") + ".jpg"
             cv2.imwrite(image_path, frame)
 
-            # Detect vehicles from the image captured
-            detected_results, img_to_classify = self.detect(image_path)
-            detected_results.save('SFS Captures/')
-
             # Predict on the captured image
-            category = self.predict(img_to_classify)
+            category = self.predict(image_path)
             print("Spacebar pressed!")
 
             self.updateOutput(category)
@@ -295,15 +202,6 @@ class VehicleDetection(QMainWindow):
         image = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format.Format_BGR888)
 
         # Set the image to the webcam label
-        self.updateImage(image)
-
-        # Starting the thread
-        self.DetectionThread.setFrame(frame)
-        self.DetectionThread.start()
-        self.DetectionThread.image_update.connect(self.updateImage)
-        # self.process_frame(frame)
-
-    def updateImage(self, image):
         self.webcamLabel.setPixmap(QPixmap.fromImage(image))
 
     def updateRates(self):
@@ -322,7 +220,7 @@ class VehicleDetection(QMainWindow):
         d = cv2.resize(image_path, (299, 299))
         x = np.expand_dims(d, axis=0)
         img_data = preprocess_input(x)
-        prediction = np.argmax(classification_model.predict(img_data), axis=1)[0]
+        prediction = np.argmax(model.predict(img_data), axis=1)[0]
         category = prediction
         print("Category: ", category, self.count_thread)
         # return category
@@ -338,12 +236,8 @@ class VehicleDetection(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    instance = ApplicationWindow()
+    instance = VehicleDetection()
     instance.show()
-    model = torch.hub.load('./yolov7', 'custom', 'best.pt', source='local')
-    model.eval()
-    # detection_model = instance.load_detection_model()
-    # print(type(detection_model))
     thread = threading.Thread(target=api.thread_function)
     thread.start()
     sys.exit(app.exec())
