@@ -23,82 +23,13 @@ import api
 # category_dict = api.category_dict
 # price_dict = api.price_dict
 
-class VehicleDetectionThread(QThread):
-    # Defining the signal/ output returned by this thread which is a QImage
-    image_update = pyqtSignal(QImage)
+# Load the pre-trained SSD model
+model_path = 'mobilenet_iter_73000.caffemodel'
+prototxt_path = 'deploy.prototxt'
+net = cv2.dnn.readNetFromCaffe(prototxt_path, model_path)
 
-    def __init__(self):
-        self.frame = None
-        super().__init__()
 
-    # Setter
-    def setFrame(self, frame):
-        self.frame = frame
-
-    # Function to run the thread
-    def run(self):
-        self.threadActive = True
-        while self.threadActive:
-            self.process_frame(self.frame)
-
-    def stop(self):
-        self.threadActive = False
-        self.quit()
-
-    def process_frame(self, frm):
-        # ret, frame = self.webcam.read()
-        # frame = cv2.flip(frame, 1)
-        # if ret:
-            # Preprocess the frame
-            # preprocessed_frame = self.preprocess_frame(frame)
-            frame = cv2.cvtColor(frm, cv2.COLOR_BGR2RGB)
-            print("preprocessing frame done")
-
-            # preprocessed_frame = preprocessed_frame.squeeze(0)
-            # transformer = transforms.ToPILImage()
-            # org_im = transformer(frame)
-            org_im = Image.fromarray(frame)
-            timestamp = datetime.datetime.now().strftime("%d-%m-%y %H-%M-%S")
-            org_im.save(timestamp + '.jpg')
-            # Pass the preprocessed frame through the YOLOv7 model
-            print("Detection started")
-            self.detection(timestamp + '.jpg')
-            print("Detection done")
-            detection_path = "SFS Captures/detections/"
-            self.convert_frame(detection_path + timestamp + ".jpg")
-            # print("Predictions:", predictions)
-            # predictions.save('SFS Captures/')
-            # pred_data = predictions.pandas().xyxy[0]
-            # print('Prediction done')
-            # print(pred_data)
-
-            # # Check for empty dataframe (No Vehicles Detected)
-            # if not pred_data.empty:
-            #     # Draw bounding boxes and labels on the frame
-            #     output_frame = self.draw_predictions(frame, pred_data)
-
-            #     # Display the updated frame in the PyQt6 application
-            #     self.display_frame(output_frame)
-            
-            # else:
-            #     # Display simple frame with no boxes
-            #     self.display_frame(frame)
-
-    def detection(self, image_path):
-        weights_path = 'best.pt'
-        process = Popen(["python", "detect.py", "--weights", weights_path, "--source", image_path, "--project", "SFS Captures", "--name", "detections", "--exist-ok"], shell=True)
-        process.wait()
-
-    def convert_frame(self, img_path):
-        image_after_detection = cv2.imread(img_path)
-        corrected_image = cv2.cvtColor(image_after_detection, cv2.COLOR_BGR2RGB)
-        # Convert the frame to QImage and display it in the QLabel
-        q_image = QImage(corrected_image.data, corrected_image.shape[1], corrected_image.shape[0], QImage.Format.Format_RGB888)
-        q_image = q_image.scaled(780, 560, Qt.AspectRatioMode.KeepAspectRatio)
-        # Send the image back to main program
-        self.image_update.emit(q_image)
-
-class ApplicationWindow(QMainWindow):
+class VehicleDetection(QMainWindow):
     def __init__(self):
         super().__init__()
 
@@ -331,6 +262,35 @@ class ApplicationWindow(QMainWindow):
         if not ret:
             return
 
+        blob = cv2.dnn.blobFromImage(frame, 0.007843, (300, 300), 127.5)
+
+        # Set the input to the model and perform detection
+        net.setInput(blob)
+        detections = net.forward()
+
+        # Process detections and draw bounding boxes on the frame
+        for i in range(detections.shape[2]):
+            confidence = detections[0, 0, i, 2]
+
+            if confidence > 0.999:  # Set the confidence threshold here
+                
+                class_id = int(detections[0, 0, i, 1])
+                class_name = 'Car'  # You can use a list of class names if needed
+                color = (255, 0, 0)  # BGR color for bounding box (blue in this case)
+                box = detections[0, 0, i, 3:7] * np.array([frame.shape[1], frame.shape[0], frame.shape[1], frame.shape[0]])
+                x1, y1, x2, y2 = box.astype('int')
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness=2)
+                cv2.putText(frame, class_name, (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                
+                # self.predict(frame[y1:y2, x1:x2])
+
+                # Predict on the captured image in a new thread
+                thread = threading.Thread(target=self.predict, args=(frame,))
+                thread.start()
+
+        # Show the frame with bounding boxes
+        #cv2.imshow('Car Detection', frame)
+
         # Convert the frame to a QImage
         image = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format.Format_BGR888)
 
@@ -348,16 +308,27 @@ class ApplicationWindow(QMainWindow):
 
     def updateRates(self):
         self.rate_value.setText("{}: {}, \n{}: {}, \n{}: {}".format(api.category_dict["2"], api.price_dict["2"], api.category_dict["1"], api.price_dict["1"], api.category_dict["0"], api.price_dict["0"]))
+    count_thread=0
+    def predict(self, image_path):
+        print(self.count_thread,"000000000000000")
+        if self.count_thread>0:
+            return
 
-    def predict(self, crop_image):
-        classification_model = load_model('model_inceptionresnetv2.h5')
+        self.count_thread+=1
+        print(self.count_thread,"111111111")
+        model = load_model('model_inceptionresnetv2.h5')
         # img = image.load_img(image_path, target_size=(299,299))
         # x = image.img_to_array(img)
-        x = np.expand_dims(crop_image, axis=0)
+        d = cv2.resize(image_path, (299, 299))
+        x = np.expand_dims(d, axis=0)
         img_data = preprocess_input(x)
         prediction = np.argmax(classification_model.predict(img_data), axis=1)[0]
         category = prediction
-        return category
+        print("Category: ", category, self.count_thread)
+        # return category
+        self.category_name.setText(api.category_dict[str(category)])
+        self.price_value.setText(api.price_dict[str(category)])
+        self.count_thread=0
 
     def updateOutput(self, result):
         self.category_name.setText(api.category_dict[str(result)])
