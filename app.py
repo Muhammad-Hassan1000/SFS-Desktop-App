@@ -4,7 +4,11 @@ import cv2
 import datetime
 from PIL import Image
 import numpy as np
+<<<<<<< HEAD
 from tensorflow.keras.applications.inception_resnet_v2 import preprocess_input
+=======
+from tensorflow.keras.applications.xception import preprocess_input
+>>>>>>> 5bf41738008bdb7d678217b6c84f77c98541b151
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from PyQt6.QtCore import Qt, QUrl, QTimer
@@ -100,33 +104,48 @@ class VehicleDetection(QMainWindow):
         # right_layout.setSpacing(10)
         # main_layout.addLayout(right_layout, 0, 1)
 
+        # Create a label to display vehicle being classified
+        self.image_label = QLabel(self)
+        self.image_label.setScaledContents(True)
+        # self.imageLabel.setStyleSheet("padding-left: 30px; padding-bottom: 30px")
+        self.image_label.setFixedWidth(560)
+        self.image_label.setFixedHeight(400)
+        self.image_label.setContentsMargins(100, 50, 0, 20)
+        main_layout.addWidget(self.image_label, 1, 1, 2, 2)
+
         # Create label for category label
         self.category_label = QLabel("Category")
         self.category_label.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.category_label.setContentsMargins(150, 100, 0, 20)
-        self.category_label.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
-        main_layout.addWidget(self.category_label, 1, 1, 2, 1)
+        self.category_label.setContentsMargins(150, 40, 0, 0)
+        self.category_label.setStyleSheet("font-family: Bebas Neue; font-size: 26pt; font-weight: bold")
+        main_layout.addWidget(self.category_label, 3, 1, 1, 1)
 
         # Create label for category name
         self.category_name = QLabel()
         self.category_name.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.category_name.setContentsMargins(10, 100, 0, 20)
-        self.category_name.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
-        main_layout.addWidget(self.category_name, 1, 2, 2, 1)
+        self.category_name.setContentsMargins(10, 40, 0, 0)
+        self.category_name.setStyleSheet("font-family: Bebas Neue; font-size: 26pt; font-weight: bold")
+        main_layout.addWidget(self.category_name, 3, 2, 1, 1)
 
         # Create label for price label
         self.price_label = QLabel("Price")
         self.price_label.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.price_label.setContentsMargins(150, 100, 0, 20)
-        self.price_label.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
-        main_layout.addWidget(self.price_label, 2, 1, 2, 1)
+        self.price_label.setContentsMargins(150, 10, 0, 20)
+        self.price_label.setStyleSheet("font-family: Bebas Neue; font-size: 26pt; font-weight: bold")
+        main_layout.addWidget(self.price_label, 4, 1, 1, 1)
 
         # Create label for price value
         self.price_value = QLabel()
         self.price_value.setAlignment(Qt.AlignmentFlag.AlignTop)
+<<<<<<< HEAD
         self.price_value.setContentsMargins(10, 100, 0, 20)
         self.price_value.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
         main_layout.addWidget(self.price_value, 2, 2, 2, 1)
+=======
+        self.price_value.setContentsMargins(10, 10, 0, 20)
+        self.price_value.setStyleSheet("font-family: Bebas Neue; font-size: 26pt; font-weight: bold")
+        main_layout.addWidget(self.price_value, 4, 2, 1, 1)
+>>>>>>> 5bf41738008bdb7d678217b6c84f77c98541b151
 
     
     def keyPressEvent(self, event):
@@ -182,12 +201,12 @@ class VehicleDetection(QMainWindow):
             if confidence > 0.999:  # Set the confidence threshold here
                 
                 class_id = int(detections[0, 0, i, 1])
-                class_name = 'Car'  # You can use a list of class names if needed
-                color = (255, 0, 0)  # BGR color for bounding box (blue in this case)
+                class_name = 'Vehicle'  # You can use a list of class names if needed
+                color = (20, 255, 57)  # BGR color for bounding box (blue in this case)
                 box = detections[0, 0, i, 3:7] * np.array([frame.shape[1], frame.shape[0], frame.shape[1], frame.shape[0]])
                 x1, y1, x2, y2 = box.astype('int')
                 cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness=2)
-                cv2.putText(frame, class_name, (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                cv2.putText(frame, class_name, (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color, 1)
                 
                 # self.predict(frame[y1:y2, x1:x2])
 
@@ -214,7 +233,22 @@ class VehicleDetection(QMainWindow):
 
         self.count_thread+=1
         print(self.count_thread,"111111111")
-        model = load_model('model_inceptionresnetv2.h5')
+
+        # Getting present working directory's path
+        absolute_path = os.getcwd()
+        
+        # Checking Path to save images
+        if not os.path.exists(os.path.join(absolute_path, "SFS Captures")):
+            os.mkdir(os.path.join(absolute_path, "SFS Captures"))
+        
+        # Saving Image captured
+        storing_path = "SFS Captures/" + datetime.datetime.now().strftime("%d-%m-%y %H-%M-%S") + ".jpg"
+        cv2.imwrite(storing_path, image_path)
+                
+        # Set the image to the image label
+        self.image_label.setPixmap(self.imageToPixmapConverter(storing_path))
+
+        model = load_model('best_xception.h5')
         # img = image.load_img(image_path, target_size=(299,299))
         # x = image.img_to_array(img)
         d = cv2.resize(image_path, (299, 299))
@@ -223,14 +257,24 @@ class VehicleDetection(QMainWindow):
         prediction = np.argmax(model.predict(img_data), axis=1)[0]
         category = prediction
         print("Category: ", category, self.count_thread)
+
         # return category
         self.category_name.setText(api.category_dict[str(category)])
         self.price_value.setText(api.price_dict[str(category)])
+        
         self.count_thread=0
 
     def updateOutput(self, result):
         self.category_name.setText(api.category_dict[str(result)])
         self.price_value.setText(api.price_dict[str(result)])
+
+    def imageToPixmapConverter(self, image_path):
+        frame = cv2.imread(image_path)
+        # Convert the frame to a QImage
+        image = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format.Format_BGR888)
+        # Convert image to QPixmap
+        q_pixmap = QPixmap.fromImage(image)
+        return q_pixmap
     
 
 
