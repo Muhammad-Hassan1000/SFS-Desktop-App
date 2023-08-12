@@ -109,34 +109,34 @@ class VehicleDetection(QMainWindow):
         # self.imageLabel.setStyleSheet("padding-left: 30px; padding-bottom: 30px")
         self.image_label.setFixedWidth(560)
         self.image_label.setFixedHeight(400)
-        self.image_label.setContentsMargins(100, 50, 0, 20)
+        self.image_label.setContentsMargins(40, 50, 0, 20)
         main_layout.addWidget(self.image_label, 1, 1, 2, 2)
 
         # Create label for category label
         self.category_label = QLabel("Category")
         self.category_label.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.category_label.setContentsMargins(150, 40, 0, 0)
+        self.category_label.setContentsMargins(40, 80, 0, 0)
         self.category_label.setStyleSheet("font-family: Bebas Neue; font-size: 26pt; font-weight: bold")
         main_layout.addWidget(self.category_label, 3, 1, 1, 1)
 
         # Create label for category name
         self.category_name = QLabel()
         self.category_name.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.category_name.setContentsMargins(10, 40, 0, 0)
+        self.category_name.setContentsMargins(10, 80, 0, 0)
         self.category_name.setStyleSheet("font-family: Bebas Neue; font-size: 26pt; font-weight: bold")
         main_layout.addWidget(self.category_name, 3, 2, 1, 1)
 
         # Create label for price label
         self.price_label = QLabel("Price")
         self.price_label.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.price_label.setContentsMargins(150, 10, 0, 20)
+        self.price_label.setContentsMargins(40, 10, 0, 50)
         self.price_label.setStyleSheet("font-family: Bebas Neue; font-size: 26pt; font-weight: bold")
         main_layout.addWidget(self.price_label, 4, 1, 1, 1)
 
         # Create label for price value
         self.price_value = QLabel()
         self.price_value.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.price_value.setContentsMargins(10, 10, 0, 20)
+        self.price_value.setContentsMargins(10, 10, 0, 50)
         self.price_value.setStyleSheet("font-family: Bebas Neue; font-size: 26pt; font-weight: bold")
         main_layout.addWidget(self.price_value, 4, 2, 1, 1)
 
@@ -243,8 +243,6 @@ class VehicleDetection(QMainWindow):
                 
         # Set the image to the image label
         self.image_label.setPixmap(self.imageToPixmapConverter(storing_path))
-
-        ############################## api wala load model ##############################
 
         model = load_model('best_xception.h5')
         # img = image.load_img(image_path, target_size=(299,299))
