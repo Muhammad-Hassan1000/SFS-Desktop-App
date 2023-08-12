@@ -12,7 +12,8 @@ price_dict = {'0': 'Rs.230/ltr', '1':'Rs.180/ltr', '2':'Rs.130/ltr'}
 
 end_api = False
 
-URL = "https://63e944f34f3c6aa6e7cae9e9.mockapi.io/rate/petrol"
+# URL = "https://63e944f34f3c6aa6e7cae9e9.mockapi.io/rate/petrol"
+URL = "https://sfsprotal.azurewebsites.net/get_category"
 ratelist=[111,222,333]
 timeinforce =[2000,1,1,1,1,1]
 activetime = datetime.now().strftime("%d-%m-%y %H-%M-%S") 
@@ -31,10 +32,11 @@ def run_api():
     # request was successful
     if response.status_code == 200:
         data = response.json()
-        ratelist[0:3]=data[0:3]
-        tif=data[3]
-        print(tif)
-        return tif
+        print(data)
+        ratelist[0:3]=data["Small"],data["Medium"],data["Large"]
+        #tif=data[3]
+        # print(tif)
+        # return tif
 
     else:
         print(f"Request failed with status code {response.status_code}")
@@ -46,8 +48,6 @@ def check_timeinforce(tif):
     print(tif)
     target_datetime = datetime(tif[0],tif[1],tif[2],tif[3],tif[4],tif[5])
     
-    print(current_datetime)
-    print(target_datetime)
     # Check if the target datetime has passed
     if current_datetime >= target_datetime:
         print(price_dict)
@@ -60,7 +60,7 @@ def check_timeinforce(tif):
 def thread_function():
     while end_api==False:
         # Call the function every minute
-        tif = run_api()
-        check_timeinforce(tif)
+        run_api()
+        check_timeinforce(timeinforce)
         time.sleep(5)
 

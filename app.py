@@ -1,14 +1,13 @@
+import json
 import sys
 import os
 import cv2
 import datetime
 from PIL import Image
+
 import numpy as np
-<<<<<<< HEAD
-from tensorflow.keras.applications.inception_resnet_v2 import preprocess_input
-=======
+import requests
 from tensorflow.keras.applications.xception import preprocess_input
->>>>>>> 5bf41738008bdb7d678217b6c84f77c98541b151
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from PyQt6.QtCore import Qt, QUrl, QTimer
@@ -37,7 +36,7 @@ class VehicleDetection(QMainWindow):
 
         category_dict = {'0': 'Large', '1':'Medium', '2':'Small'}
         price_dict = {'0': '300', '1': '250', '2': '200'}
-        
+
         # Set window title and size
         self.setWindowTitle("Subsidized Fueling System - SFS")
         self.setWindowState(Qt.WindowState.WindowMaximized)
@@ -137,15 +136,9 @@ class VehicleDetection(QMainWindow):
         # Create label for price value
         self.price_value = QLabel()
         self.price_value.setAlignment(Qt.AlignmentFlag.AlignTop)
-<<<<<<< HEAD
-        self.price_value.setContentsMargins(10, 100, 0, 20)
-        self.price_value.setStyleSheet("font-family: Bebas Neue; font-size: 30pt; font-weight: bold")
-        main_layout.addWidget(self.price_value, 2, 2, 2, 1)
-=======
         self.price_value.setContentsMargins(10, 10, 0, 20)
         self.price_value.setStyleSheet("font-family: Bebas Neue; font-size: 26pt; font-weight: bold")
         main_layout.addWidget(self.price_value, 4, 2, 1, 1)
->>>>>>> 5bf41738008bdb7d678217b6c84f77c98541b151
 
     
     def keyPressEvent(self, event):
@@ -225,7 +218,10 @@ class VehicleDetection(QMainWindow):
 
     def updateRates(self):
         self.rate_value.setText("{}: {}, \n{}: {}, \n{}: {}".format(api.category_dict["2"], api.price_dict["2"], api.category_dict["1"], api.price_dict["1"], api.category_dict["0"], api.price_dict["0"]))
+    
+
     count_thread=0
+    
     def predict(self, image_path):
         print(self.count_thread,"000000000000000")
         if self.count_thread>0:
@@ -248,6 +244,8 @@ class VehicleDetection(QMainWindow):
         # Set the image to the image label
         self.image_label.setPixmap(self.imageToPixmapConverter(storing_path))
 
+        ############################## api wala load model ##############################
+
         model = load_model('best_xception.h5')
         # img = image.load_img(image_path, target_size=(299,299))
         # x = image.img_to_array(img)
@@ -256,6 +254,7 @@ class VehicleDetection(QMainWindow):
         img_data = preprocess_input(x)
         prediction = np.argmax(model.predict(img_data), axis=1)[0]
         category = prediction
+        # category = prediction
         print("Category: ", category, self.count_thread)
 
         # return category
