@@ -34,6 +34,9 @@ def run_api():
         data = response.json()
         print(data)
         ratelist[0:3]=data["Small"],data["Medium"],data["Large"]
+        price_dict["0"]="Rs." + str(ratelist[2]) + "/ltr"
+        price_dict["1"]="Rs." + str(ratelist[1]) + "/ltr"
+        price_dict["2"]="Rs." + str(ratelist[0]) + "/ltr"
         #tif=data[3]
         # print(tif)
         # return tif
@@ -41,26 +44,26 @@ def run_api():
     else:
         print(f"Request failed with status code {response.status_code}")
 
-def check_timeinforce(tif):
-    current_datetime = datetime.now()
+# def check_timeinforce(tif):
+#     current_datetime = datetime.now()
     
-    print("time in force  ----")
-    print(tif)
-    target_datetime = datetime(tif[0],tif[1],tif[2],tif[3],tif[4],tif[5])
+#     print("time in force  ----")
+#     print(tif)
+#     target_datetime = datetime(tif[0],tif[1],tif[2],tif[3],tif[4],tif[5])
     
-    # Check if the target datetime has passed
-    if current_datetime >= target_datetime:
-        print(price_dict)
-        price_dict["0"]="Rs." + str(ratelist[2]) + "/ltr"
-        price_dict["1"]="Rs." + str(ratelist[1]) + "/ltr"
-        price_dict["2"]="Rs." + str(ratelist[0]) + "/ltr"
-        print(price_dict)
-        print("  --  --")
+#     # Check if the target datetime has passed
+#     if current_datetime >= target_datetime:
+#         print(price_dict)
+#         price_dict["0"]="Rs." + str(ratelist[2]) + "/ltr"
+#         price_dict["1"]="Rs." + str(ratelist[1]) + "/ltr"
+#         price_dict["2"]="Rs." + str(ratelist[0]) + "/ltr"
+#         print(price_dict)
+#         print("  --  --")
 
 def thread_function():
     while end_api==False:
         # Call the function every minute
         run_api()
-        check_timeinforce(timeinforce)
+        # check_timeinforce(timeinforce)
         time.sleep(5)
 
