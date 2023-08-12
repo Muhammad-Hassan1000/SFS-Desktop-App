@@ -259,15 +259,10 @@ class VehicleDetection(QMainWindow):
         self.price_value.setText(api.price_dict[str(category)])
         
         #store these file paths in a file with their prices
-        with open("SFS Captures/price_list.txt", "a") as f:
-            f.write(str(api.price_dict[str(category)]) + "#" + datetime.datetime.now().strftime("%d-%m-%y %H-%M-%S") + ".jpg" + "\n")
+        with open("SFS Captures/price_list.csv", "a") as f:
+            f.write(str(api.price_dict[str(category)]) + "," + datetime.datetime.now().strftime("%d-%m-%y %H-%M-%S") + ".jpg" + "\n")
             f.close()
         print("Image path stored!")
-
-        # # rename the image file asynchrnously
-        # new_path = "SFS Captures/" + str(api.price_dict[str(category)]) + " " + datetime.datetime.now().strftime("%d-%m-%y %H-%M-%S") + ".jpg"
-        # os.rename(storing_path, new_path)
-        # print("Image renamed!")
 
         self.count_thread=0
 
