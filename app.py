@@ -223,7 +223,7 @@ class VehicleDetection(QMainWindow):
     count_thread=0
     
     def predict(self, image_path):
-        print(self.count_thread,"000000000000000")
+        print(self.count_thread,"0000000000")
         if self.count_thread>0:
             return
 
@@ -252,13 +252,23 @@ class VehicleDetection(QMainWindow):
         img_data = preprocess_input(x)
         prediction = np.argmax(model.predict(img_data), axis=1)[0]
         category = prediction
-        # category = prediction
         print("Category: ", category, self.count_thread)
 
         # return category
         self.category_name.setText(api.category_dict[str(category)])
         self.price_value.setText(api.price_dict[str(category)])
         
+        #store these file paths in a file with their prices
+        with open("SFS Captures/price_list.txt", "a") as f:
+            f.write(str(api.price_dict[str(category)]) + "#" + datetime.datetime.now().strftime("%d-%m-%y %H-%M-%S") + ".jpg" + "\n")
+            f.close()
+        print("Image path stored!")
+
+        # # rename the image file asynchrnously
+        # new_path = "SFS Captures/" + str(api.price_dict[str(category)]) + " " + datetime.datetime.now().strftime("%d-%m-%y %H-%M-%S") + ".jpg"
+        # os.rename(storing_path, new_path)
+        # print("Image renamed!")
+
         self.count_thread=0
 
     def updateOutput(self, result):
